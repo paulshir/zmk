@@ -1,0 +1,17 @@
+if ZMK_SPLIT_WIRED
+
+config ZMK_SPLIT_WIRED_CMD_BUFFER_ITEMS
+    default 4
+
+config ZMK_SPLIT_WIRED_EVENT_BUFFER_ITEMS
+    default 16
+
+
+if ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_POLLING
+
+config ZMK_SPLIT_WIRED_POLLING_RX_PERIOD
+    default 10
+
+endif
+
+endif

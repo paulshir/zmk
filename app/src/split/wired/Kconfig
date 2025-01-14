@@ -1,0 +1,29 @@
+if ZMK_SPLIT_WIRED
+
+choice ZMK_SPLIT_WIRED_UART_MODE_DEFAULT
+    prompt "Default UART Mode"
+    default ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT if SERIAL_SUPPORT_INTERRUPT
+
+config ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_POLLING
+    bool "Polling Mode"
+
+config ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT
+    bool "Interrupt Mode"
+    select UART_INTERRUPT_DRIVEN
+
+endchoice
+
+if ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_POLLING
+
+config ZMK_SPLIT_WIRED_POLLING_RX_PERIOD
+    int "Ticks between RX polls"
+
+endif
+
+config ZMK_SPLIT_WIRED_CMD_BUFFER_ITEMS
+    int "Number of central commands to buffer for TX/RX"
+
+config ZMK_SPLIT_WIRED_EVENT_BUFFER_ITEMS
+    int "Number of peripheral events to buffer for TX/RX"
+
+endif
