@@ -1,0 +1,13 @@
+if ZMK_SPLIT_WIRED
+
+config ZMK_SPLIT_WIRED_THREAD_STACK_SIZE
+    int "Peripheral UART transcieve thread stack size"
+    default 1024
+
+config ZMK_SPLIT_WIRED_CMD_BUFFER_ITEMS
+    int "Number of central commands to buffer for TX/RX"
+
+config ZMK_SPLIT_WIRED_EVENT_BUFFER_ITEMS
+    int "Number of peripheral events to buffer for TX/RX"
+
+endif

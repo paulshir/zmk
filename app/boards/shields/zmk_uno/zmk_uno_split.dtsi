@@ -11,8 +11,13 @@ left_encoder: &encoder {
     status = "disabled";
 };
 
+&arduino_serial {
+    status = "okay";
+};
+
 / {
     chosen {
+        zmk,split-uart = &arduino_serial;
         zmk,physical-layout = &split_matrix_physical_layout;
     };
 
