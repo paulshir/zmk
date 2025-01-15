@@ -1,5 +1,18 @@
 if ZMK_SPLIT_WIRED
 
+choice ZMK_SPLIT_WIRED_UART_MODE_DEFAULT
+    prompt "Default UART Mode"
+    default ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT if SERIAL_SUPPORT_INTERRUPT
+
+config ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_POLLING
+    bool "Polling Mode"
+
+config ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT
+    bool "Interrupt Mode"
+    select UART_INTERRUPT_DRIVEN
+
+endchoice
+
 config ZMK_SPLIT_WIRED_THREAD_STACK_SIZE
     int "Peripheral UART transcieve thread stack size"
     default 1024

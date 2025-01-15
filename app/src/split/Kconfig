@@ -24,7 +24,6 @@ config ZMK_SPLIT_WIRED
     select SERIAL
     select RING_BUFFER
     select CRC
-    select UART_INTERRUPT_DRIVEN if SERIAL_SUPPORT_INTERRUPT
 
 config ZMK_SPLIT_PERIPHERAL_HID_INDICATORS
     bool "Peripheral HID Indicators"

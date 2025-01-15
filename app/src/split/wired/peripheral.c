@@ -78,7 +78,7 @@ static void publish_commands_work(struct k_work *work);
 
 K_WORK_DEFINE(publish_commands, publish_commands_work);
 
-#if IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
 static void serial_cb(const struct device *dev, void *user_data) {
     while (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
         if (uart_irq_rx_ready(dev)) {
@@ -135,6 +135,7 @@ static void serial_cb(const struct device *dev, void *user_data) {
         }
     }
 }
+
 #else
 
 static void read_pending_rx(void) {
@@ -191,7 +192,7 @@ static int zmk_split_wired_peripheral_init(void) {
         return -ENODEV;
     }
 
-#if IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
     /* configure interrupt and callback to receive data */
     int ret = uart_irq_callback_user_data_set(uart, serial_cb, NULL);
 
@@ -207,7 +208,7 @@ static int zmk_split_wired_peripheral_init(void) {
     }
 
     uart_irq_rx_enable(uart);
-#endif
+#endif // IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
 
     return 0;
 }

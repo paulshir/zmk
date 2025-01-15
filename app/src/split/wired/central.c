@@ -78,7 +78,7 @@ static const struct wired_peripheral peripherals[] = {{
 
 static void publish_events_work(struct k_work *work);
 
-#if IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
 
 static void recv_data(const struct device *dev, const struct wired_bus *bus) {
     uint32_t last_read = 0, len = 0;
@@ -199,7 +199,7 @@ static int zmk_split_wired_central_init(void) {
         ring_buf_init(&buses[i].state->rx_buf, RX_BUFFER_SIZE, buses[i].state->rx_buffer);
         ring_buf_init(&buses[i].state->tx_buf, TX_BUFFER_SIZE, buses[i].state->tx_buffer);
 
-#if IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
         int ret = uart_irq_callback_user_data_set(buses[i].uart, serial_cb, (void *)&buses[i]);
 
         if (ret < 0) {
@@ -214,7 +214,7 @@ static int zmk_split_wired_central_init(void) {
         }
 
         uart_irq_rx_enable(buses[i].uart);
-#endif // IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#endif // IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
     }
     return 0;
 }
