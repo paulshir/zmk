@@ -151,32 +151,38 @@ static void send_pending_tx(const struct wired_bus *bus) {
 }
 
 static void read_pending_rx(const struct wired_bus *bus) {
-    uint8_t *buf;
     struct ring_buf *ring_buf = &bus->state->rx_buf;
-    uint32_t claim_len = ring_buf_put_claim(ring_buf, &buf, 1);
-
+    uint8_t *buf;
+    uint32_t read = 0;
+    uint32_t claim_len = ring_buf_put_claim(ring_buf, &buf, ring_buf_space_get(ring_buf));
     if (claim_len < 1) {
         LOG_WRN("No room available for reading in from the serial port");
-        k_sleep(K_MSEC(1));
         return;
     }
 
-    if (uart_poll_in(bus->uart, buf) < 0) {
-        ring_buf_put_finish(ring_buf, 0);
-        k_sleep(K_MSEC(1));
-    } else {
-        ring_buf_put_finish(ring_buf, 1);
-        if (ring_buf_size_get(ring_buf) >= sizeof(struct event_envelope)) {
-            k_work_submit(&bus->state->event_publish_work);
+    while (read < claim_len) {
+        if (uart_poll_in(bus->uart, buf + read) < 0) {
+            break;
         }
+
+        read++;
+    }
+
+    if (read > 0) {
+        LOG_DBG("Read %d bytes", read);
+    }
+    ring_buf_put_finish(ring_buf, read);
+
+    if (ring_buf_size_get(ring_buf) >= sizeof(struct event_envelope)) {
+        k_work_submit(&bus->state->event_publish_work);
     }
 }
 
 static void central_main(void) {
     while (true) {
         for (size_t i = 0; i < ARRAY_SIZE(buses); i++) {
-            send_pending_tx(&buses[i]);
             read_pending_rx(&buses[i]);
+            send_pending_tx(&buses[i]);
         }
 
         k_sleep(K_TICKS(1));
@@ -184,7 +190,7 @@ static void central_main(void) {
 }
 
 K_THREAD_DEFINE(central_thread, CONFIG_ZMK_SPLIT_WIRED_THREAD_STACK_SIZE, central_main, NULL, NULL,
-                NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+                NULL, K_HIGHEST_APPLICATION_THREAD_PRIO, 0, 0);
 
 #endif
 
@@ -277,6 +283,8 @@ static void publish_events_work(struct k_work *work) {
                                        bytes_left);
             bytes_left -= read;
         }
+
+        LOG_HEXDUMP_DBG(&env, sizeof(env), "Env data");
 
         // Exclude the trailing 4 bytes that contain the received CRC
         uint32_t crc = crc32_ieee((uint8_t *)&env, sizeof(env) - 4);

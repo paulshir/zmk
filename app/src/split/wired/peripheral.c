@@ -161,13 +161,14 @@ static void read_pending_rx(void) {
 }
 
 static void peripheral_main(void) {
+    LOG_DBG("MAIN");
     while (true) {
         if (k_sem_take(&tx_sem, K_NO_WAIT) >= 0) {
             LOG_DBG("Sending bytes");
             struct ring_buf *tx_buf = &chosen_tx_buf;
             uint8_t *buf;
             uint32_t claim_len;
-            while ((claim_len = ring_buf_get_claim(tx_buf, &buf, tx_buf->size)) > 0) {
+            while ((claim_len = ring_buf_get_claim(tx_buf, &buf, MIN(32, tx_buf->size))) > 0) {
                 LOG_HEXDUMP_DBG(buf, claim_len, "TX Bytes");
                 for (int i = 0; i < claim_len; i++) {
                     uart_poll_out(uart, buf[i]);
@@ -248,7 +249,7 @@ split_peripheral_wired_report_event(const struct zmk_split_transport_peripheral_
 
         LOG_DBG("Added %d to the ring buffer!", claim);
 
-#if IS_ENABLED(CONFIG_UART_INTERRUPT_DRIVEN)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
         uart_irq_tx_enable(uart);
 #else
         k_sem_give(&tx_sem);
