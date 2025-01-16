@@ -4,6 +4,6 @@ config ZMK_SPLIT_WIRED_CMD_BUFFER_ITEMS
     default 4
 
 config ZMK_SPLIT_WIRED_EVENT_BUFFER_ITEMS
-    default 4
+    default 16
 
 endif
