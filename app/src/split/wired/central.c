@@ -168,9 +168,6 @@ static void read_pending_rx(const struct wired_bus *bus) {
         read++;
     }
 
-    if (read > 0) {
-        LOG_DBG("Read %d bytes", read);
-    }
     ring_buf_put_finish(ring_buf, read);
 
     if (ring_buf_size_get(ring_buf) >= sizeof(struct event_envelope)) {
@@ -178,19 +175,20 @@ static void read_pending_rx(const struct wired_bus *bus) {
     }
 }
 
-static void central_main(void) {
-    while (true) {
-        for (size_t i = 0; i < ARRAY_SIZE(buses); i++) {
-            read_pending_rx(&buses[i]);
-            send_pending_tx(&buses[i]);
-        }
-
-        k_sleep(K_TICKS(1));
+static void send_pending_tx_work_cb(struct k_work *work) {
+    for (size_t i = 0; i < ARRAY_SIZE(buses); i++) {
+        send_pending_tx(&buses[i]);
     }
 }
 
-K_THREAD_DEFINE(central_thread, CONFIG_ZMK_SPLIT_WIRED_THREAD_STACK_SIZE, central_main, NULL, NULL,
-                NULL, K_HIGHEST_APPLICATION_THREAD_PRIO, 0, 0);
+static void read_timer_cb(struct k_timer *_timer) {
+    for (size_t i = 0; i < ARRAY_SIZE(buses); i++) {
+        read_pending_rx(&buses[i]);
+    }
+}
+
+static K_WORK_DEFINE(wired_central_rx_work, send_pending_tx_work_cb);
+static K_TIMER_DEFINE(wired_central_read_timer, read_timer_cb, NULL);
 
 #endif
 
@@ -222,6 +220,10 @@ static int zmk_split_wired_central_init(void) {
         uart_irq_rx_enable(buses[i].uart);
 #endif // IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
     }
+
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
+    k_timer_start(&wired_central_read_timer, K_TICKS(10), K_TICKS(10));
+#endif
     return 0;
 }
 
@@ -253,7 +255,11 @@ static int split_central_bt_send_command(uint8_t source,
     memcpy(buffer, &env, sizeof(env));
 
     ring_buf_put_finish(&peripheral->bus->state->tx_buf, len);
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
     uart_irq_tx_enable(peripheral->bus->uart);
+#else
+    k_work_submit(&wired_central_rx_work);
+#endif
 
     return 0;
 }
