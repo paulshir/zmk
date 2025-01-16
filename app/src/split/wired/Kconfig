@@ -13,9 +13,12 @@ config ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT
 
 endchoice
 
-config ZMK_SPLIT_WIRED_THREAD_STACK_SIZE
-    int "Peripheral UART transcieve thread stack size"
-    default 1024
+if ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_POLLING
+
+config ZMK_SPLIT_WIRED_POLLING_RX_PERIOD
+    int "Ticks between RX polls"
+
+endif
 
 config ZMK_SPLIT_WIRED_CMD_BUFFER_ITEMS
     int "Number of central commands to buffer for TX/RX"

@@ -222,7 +222,8 @@ static int zmk_split_wired_central_init(void) {
     }
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
-    k_timer_start(&wired_central_read_timer, K_TICKS(10), K_TICKS(10));
+    k_timer_start(&wired_central_read_timer, K_TICKS(CONFIG_ZMK_SPLIT_WIRED_POLLING_RX_PERIOD),
+                  K_TICKS(CONFIG_ZMK_SPLIT_WIRED_POLLING_RX_PERIOD));
 #endif
     return 0;
 }

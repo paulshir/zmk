@@ -145,13 +145,11 @@ static void read_pending_rx(void) {
 
     if (claim_len < 1) {
         LOG_WRN("No room available for reading in from the serial port");
-        k_sleep(K_TICKS(1));
         return;
     }
 
     if (uart_poll_in(uart, buf) < 0) {
         ring_buf_put_finish(ring_buf, 0);
-        k_sleep(K_TICKS(1));
     } else {
         ring_buf_put_finish(ring_buf, 1);
         if (ring_buf_size_get(ring_buf) >= sizeof(struct command_envelope)) {
@@ -160,32 +158,28 @@ static void read_pending_rx(void) {
     }
 }
 
-static void peripheral_main(void) {
-    LOG_DBG("MAIN");
-    while (true) {
-        if (k_sem_take(&tx_sem, K_NO_WAIT) >= 0) {
-            LOG_DBG("Sending bytes");
-            struct ring_buf *tx_buf = &chosen_tx_buf;
-            uint8_t *buf;
-            uint32_t claim_len;
-            while ((claim_len = ring_buf_get_claim(tx_buf, &buf, MIN(32, tx_buf->size))) > 0) {
-                LOG_HEXDUMP_DBG(buf, claim_len, "TX Bytes");
-                for (int i = 0; i < claim_len; i++) {
-                    uart_poll_out(uart, buf[i]);
-                }
-
-                ring_buf_get_finish(tx_buf, claim_len);
-            }
+static void send_pending_tx_data(void) {
+    struct ring_buf *tx_buf = &chosen_tx_buf;
+    uint8_t *buf;
+    uint32_t claim_len;
+    while ((claim_len = ring_buf_get_claim(tx_buf, &buf, MIN(32, tx_buf->size))) > 0) {
+        LOG_HEXDUMP_DBG(buf, claim_len, "TX Bytes");
+        for (int i = 0; i < claim_len; i++) {
+            uart_poll_out(uart, buf[i]);
         }
 
-        read_pending_rx();
-
-        k_sleep(K_TICKS(1));
+        ring_buf_get_finish(tx_buf, claim_len);
     }
 }
 
-K_THREAD_DEFINE(peripheral_thread, CONFIG_ZMK_SPLIT_WIRED_THREAD_STACK_SIZE, peripheral_main, NULL,
-                NULL, NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+static void send_pending_tx_work_cb(struct k_work *work) { send_pending_tx_data(); }
+
+static K_WORK_DEFINE(send_pending_tx, send_pending_tx_work_cb);
+
+static void wired_peripheral_read_tick_cb(struct k_timer *timer) { read_pending_rx(); }
+
+static K_TIMER_DEFINE(wired_peripheral_read_timer, wired_peripheral_read_tick_cb, NULL);
+
 #endif
 
 static int zmk_split_wired_peripheral_init(void) {
@@ -209,6 +203,9 @@ static int zmk_split_wired_peripheral_init(void) {
     }
 
     uart_irq_rx_enable(uart);
+#else
+    k_timer_start(&wired_peripheral_read_timer, K_TICKS(CONFIG_ZMK_SPLIT_WIRED_POLLING_RX_PERIOD),
+                  K_TICKS(CONFIG_ZMK_SPLIT_WIRED_POLLING_RX_PERIOD));
 #endif // IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
 
     return 0;
@@ -252,7 +249,7 @@ split_peripheral_wired_report_event(const struct zmk_split_transport_peripheral_
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_WIRED_UART_MODE_DEFAULT_INTERRUPT)
         uart_irq_tx_enable(uart);
 #else
-        k_sem_give(&tx_sem);
+        k_work_submit(&send_pending_tx);
 #endif
     }
     return 0;
