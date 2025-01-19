@@ -11,13 +11,18 @@
 
 #include <zmk/split/transport/types.h>
 
+#define WIRED_MSG_PREFIX "UarT"
+#define WIRED_MSG_PREFIX_SIZE 4
+
 struct event_envelope {
+    uint8_t msg_prefix[WIRED_MSG_PREFIX_SIZE];
     uint8_t source;
     struct zmk_split_transport_peripheral_event event;
     uint32_t crc;
 } __packed;
 
 struct command_envelope {
+    uint8_t msg_prefix[WIRED_MSG_PREFIX_SIZE];
     uint8_t source;
     struct zmk_split_transport_central_command cmd;
     uint32_t crc;

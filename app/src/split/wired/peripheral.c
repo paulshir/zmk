@@ -174,6 +174,7 @@ split_peripheral_wired_report_event(const struct zmk_split_transport_peripheral_
     size_t added = 0;
 
     struct event_envelope env = {
+        .msg_prefix = WIRED_MSG_PREFIX,
         .source = peripheral_id,
         .event = *event,
     };
@@ -217,6 +218,16 @@ ZMK_SPLIT_TRANSPORT_PERIPHERAL_REGISTER(wired_peripheral, &peripheral_api);
 
 static void publish_commands_work(struct k_work *work) {
     while (ring_buf_size_get(&chosen_rx_buf) >= sizeof(struct command_envelope)) {
+        // Discard single byte if prefix does not match.
+        uint8_t data[WIRED_MSG_PREFIX_SIZE];
+        ring_buf_peek(&chosen_rx_buf, data, WIRED_MSG_PREFIX_SIZE);
+        if (memcmp(data, WIRED_MSG_PREFIX, WIRED_MSG_PREFIX_SIZE)) {
+            uint8_t discard;
+            ring_buf_get(&chosen_rx_buf, &discard, 1);
+            LOG_WRN("Discarding non prefix byte 0x%02X", discard);
+            continue;
+        }
+
         struct command_envelope env;
         size_t bytes_left = sizeof(struct command_envelope);
 
@@ -225,6 +236,8 @@ static void publish_commands_work(struct k_work *work) {
                                        bytes_left);
             bytes_left -= read;
         }
+
+        LOG_HEXDUMP_DBG(&env, sizeof(env), "Env data");
 
         // Exclude the trailing 4 bytes that contain the received CRC
         uint32_t crc = crc32_ieee((uint8_t *)&env, sizeof(env) - 4);

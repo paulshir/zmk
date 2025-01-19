@@ -170,7 +170,7 @@ static int split_central_bt_send_command(uint8_t source,
         return -ENOSPC;
     }
 
-    struct command_envelope env = {.source = source, .cmd = cmd};
+    struct command_envelope env = {.msg_prefix = WIRED_MSG_PREFIX, .source = source, .cmd = cmd};
 
     env.crc = crc32_ieee((void *)&env, sizeof(env) - 4);
     LOG_DBG("calculated a CRC for %d", env.crc);
@@ -204,6 +204,16 @@ static void publish_events_work(struct k_work *work) {
     struct wired_bus_state *state = CONTAINER_OF(work, struct wired_bus_state, event_publish_work);
 
     while (ring_buf_size_get(&state->rx_buf) >= sizeof(struct event_envelope)) {
+        // Discard single byte if prefix does not match.
+        uint8_t data[WIRED_MSG_PREFIX_SIZE];
+        ring_buf_peek(&state->rx_buf, data, WIRED_MSG_PREFIX_SIZE);
+        if (memcmp(data, WIRED_MSG_PREFIX, WIRED_MSG_PREFIX_SIZE)) {
+            uint8_t discard;
+            ring_buf_get(&state->rx_buf, &discard, 1);
+            LOG_WRN("Discarding non prefix byte 0x%02X", discard);
+            continue;
+        }
+
         struct event_envelope env;
         size_t bytes_left = sizeof(struct event_envelope);
 

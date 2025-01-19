@@ -46,6 +46,8 @@ int zmk_split_transport_peripheral_command_handler(
         if (err) {
             LOG_ERR("Failed to invoke behavior %s: %d", binding.behavior_dev, err);
         }
+
+        break;
     }
     default:
         LOG_WRN("Unhandled command type %d", cmd.type);
