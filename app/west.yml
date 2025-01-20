@@ -9,7 +9,7 @@ manifest:
   projects:
     - name: zephyr
       remote: paulshir
-      revision: v3.5.0+zmk-fixes+pio-led
+      revision: v3.5.0+zmk-fixes+pio-led+pio-uart-wait
       clone-depth: 1
       import:
         name-blocklist:
